@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Punch Ring</string>
+    <string name="accessibility_service_label">Punch Ring 자동 대비·링 터치</string>
+    <string name="contrast_service_description">펀치홀 링을 짧게 눌러 셀피 카메라를 열거나 길게 눌러 기기 상태 패널을 열고, 상단 주변 밝기로 Punch Ring 색상을 자동 전환합니다. 화면 이미지는 저장하거나 전송하지 않습니다.</string>
+</resources>

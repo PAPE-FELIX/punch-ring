@@ -1,0 +1,7 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="com.pape.punchring.rendertest">
+    <uses-sdk android:minSdkVersion="31" android:targetSdkVersion="36" />
+    <application android:label="Punch Ring render test" android:debuggable="true" />
+    <instrumentation android:name="com.pape.punchring.IconRenderTest"
+        android:targetPackage="com.pape.punchring.rendertest" />
+</manifest>

@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Punch Ring</string>
+    <string name="accessibility_service_label">Punch Ring auto contrast and ring touch</string>
+    <string name="contrast_service_description">Tap the camera-cutout ring to open the selfie camera or long-press it for the device status panel. Punch Ring colors adapt to brightness near the top of the screen. Screen images are never saved or sent.</string>
+</resources>
