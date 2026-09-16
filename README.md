@@ -1,3 +1,7 @@
+<p align="center">
+  <b>English</b> | <a href="README.ko.md">한국어</a>
+</p>
+
 # Punch Ring
 
 Turns the camera cutout on an Android phone into a battery and signal gauge.
@@ -89,24 +93,3 @@ The script picks up `ANDROID_HOME`, or falls back to the common install location
 ## License
 
 [MIT](LICENSE). Bundled Pretendard Variable is licensed under the SIL Open Font License.
-
----
-
-## 한국어
-
-안드로이드 폰의 카메라 펀치홀 둘레에 **배터리 게이지와 신호 점**을 그리는 투명 오버레이 앱입니다.
-펀치홀이라는 죽은 공간을 상태 표시로 씁니다.
-
-- **위쪽 호 = 배터리** — 충전 중 연두, 고속충전은 민트색이 은은하게 호흡, 절전 주황, 15% 미만 빨강
-- **아래쪽 점 = 신호** — 셀룰러가 연두 바탕, 그 위를 Wi-Fi 가 선명한 파랑으로 덮음. VPN 중에도 실제 Wi-Fi 세기를 읽음
-- **상태 방울** — 충전·완충·블루투스·핫스팟·VPN·네트워크 전환·고온이 펀치홀에서 방울로 분리됐다가 다시 흡수
-- **짧게 누르면** 셀피 카메라, **길게 누르면** 기기 상태 패널 또는 **후면 카메라 + 웃는 얼굴**(설정에서 선택)
-
-웃는 얼굴은 카메라를 쓰는 동안 **배터리 호가 제자리에서 180도 돌아 입**이 되고, **신호 점 두 개가 같은
-원 테두리를 타고 올라가 눈**이 됩니다. 화면을 가로로 돌리면 얼굴도 같이 돕니다.
-
-**인터넷 권한이 없습니다.** 계정도 서버도 없고, 모든 값은 폰이 이미 알고 있는 것만 씁니다.
-
-설치는 [Releases](../../releases) 의 APK 를 받아서 「다른 앱 위에 표시」를 허용하면 됩니다.
-접근성 서비스는 선택이며, 켜면 배경 밝기에 따라 링 색이 자동으로 바뀌고 링 터치가 활성화됩니다.
-캡처한 화면은 메모리에서 바로 버리고 저장·전송하지 않습니다. Android 12 이상.
