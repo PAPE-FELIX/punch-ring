@@ -55,6 +55,8 @@ final class AppSettings {
     static final int DEFAULT_FAST_THRESHOLD_WATTS = 12;
     static final int DEFAULT_THERMAL_THRESHOLD_C = 42;
     static final boolean DEFAULT_SMART_HIDE = true;
+    static final String LOW_BATTERY_PERCENT = "low_battery_percent";
+    static final int DEFAULT_LOW_BATTERY_PERCENT = 15;   // below this: red arc + warning haptic (user-adjustable 5–30)
     static final boolean DEFAULT_DIM_ON_SCREEN_OFF = true;
     static final boolean DEFAULT_BURN_IN_PROTECTION = true;
     static final int DEFAULT_STYLE_PRESET = 0;

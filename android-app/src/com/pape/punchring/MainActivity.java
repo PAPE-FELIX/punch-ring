@@ -355,6 +355,10 @@ public final class MainActivity extends Activity {
             prefs.getBoolean(AppSettings.BURN_IN_PROTECTION,
                 AppSettings.DEFAULT_BURN_IN_PROTECTION),
             value -> saveBoolean(AppSettings.BURN_IN_PROTECTION, value));
+        addSetting(root, tr("배터리 부족 기준", "Low battery threshold"),
+            tr("이 값 미만이면 빨간 링·경고 진동 · 기본 15%", "Below this: red ring and warning haptic · default 15%"),
+            5, 30, prefs.getInt(AppSettings.LOW_BATTERY_PERCENT, AppSettings.DEFAULT_LOW_BATTERY_PERCENT),
+            "%", value -> saveInt(AppSettings.LOW_BATTERY_PERCENT, value));
 
         sectionTitle(root, tr("색상과 움직임", "Color & motion"), medium);
         addPresetButtons(root, prefs.getInt(
@@ -489,9 +493,9 @@ public final class MainActivity extends Activity {
         root.addView(backupRow);
 
         TextView note = label(tr(
-            "표시 우선순위  고속충전 → 충전 → 15% 미만 → 절전 → 일반\n" +
+            "표시 우선순위  고속충전 → 충전 → 배터리 부족(설정값 미만) → 절전 → 일반\n" +
                 "네트워크 점은 같은 네 좌표에 셀룰러를 먼저 그리고 Wi-Fi를 위에 겹칩니다.",
-            "Display priority  Fast charge → Charging → Below 15% → Power saver → Normal\n" +
+            "Display priority  Fast charge → Charging → Low battery (below threshold) → Power saver → Normal\n" +
                 "Cellular dots are drawn first at the same four positions, with Wi-Fi layered above."),
             13, Color.rgb(145, 151, 161));
         note.setLineSpacing(0, 1.25f);

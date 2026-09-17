@@ -7,6 +7,7 @@ final class StatusHaptic {
     static final int CHARGE = 2;
     static final int WARNING = 3;
     private StatusState previous;
+    int lowBatteryPercent = AppSettings.DEFAULT_LOW_BATTERY_PERCENT;
 
     int observe(StatusState next) {
         if (previous == null) { previous = next.copy(); return NONE; }
@@ -15,7 +16,7 @@ final class StatusHaptic {
         else if ((previous.networkConnected && !next.networkConnected)
                 || (previous.wifiConnected && !next.wifiConnected)
                 || (previous.cellularRegistered && !next.cellularRegistered)
-                || (previous.batteryPercent >= 15 && next.batteryPercent < 15)) result = WARNING;
+                || (previous.batteryPercent >= lowBatteryPercent && next.batteryPercent < lowBatteryPercent)) result = WARNING;
         else if ((!previous.networkConnected && next.networkConnected)
                 || (!previous.wifiConnected && next.wifiConnected)
                 || (!previous.cellularRegistered && next.cellularRegistered)) result = CONNECT;

@@ -62,6 +62,10 @@ final class PunchRingView extends View {
     private boolean dimOnScreenOff = AppSettings.DEFAULT_DIM_ON_SCREEN_OFF;
     private boolean burnInProtection = AppSettings.DEFAULT_BURN_IN_PROTECTION;
     private int stylePreset = AppSettings.DEFAULT_STYLE_PRESET;
+    private int lowBatteryPercent = AppSettings.DEFAULT_LOW_BATTERY_PERCENT;
+    // Smart-hide fade: fullscreen/camera hide and show ease in and out instead of popping.
+    private boolean hideShown = false;
+    private long hideChangedAt = 0L;
     private int animationSpeedPercent = AppSettings.DEFAULT_ANIMATION_SPEED_PERCENT;
     private int thermalThresholdC = AppSettings.DEFAULT_THERMAL_THRESHOLD_C;
     private List<String> priorityOrder;
@@ -171,6 +175,9 @@ final class PunchRingView extends View {
         burnInProtection = prefs.getBoolean(
             AppSettings.BURN_IN_PROTECTION, AppSettings.DEFAULT_BURN_IN_PROTECTION);
         stylePreset = prefs.getInt(AppSettings.STYLE_PRESET, AppSettings.DEFAULT_STYLE_PRESET);
+        lowBatteryPercent = Math.max(5, Math.min(30, prefs.getInt(
+            AppSettings.LOW_BATTERY_PERCENT, AppSettings.DEFAULT_LOW_BATTERY_PERCENT)));
+        statusHaptic.lowBatteryPercent = lowBatteryPercent;
         animationSpeedPercent = Math.max(10, Math.min(500, prefs.getInt(
             AppSettings.ANIMATION_SPEED_PERCENT, AppSettings.DEFAULT_ANIMATION_SPEED_PERCENT)));
         graphClock.setSpeed(SystemClock.elapsedRealtime(), animationSpeedPercent);
@@ -226,7 +233,15 @@ final class PunchRingView extends View {
             publishGeometry(cx, cy, touchDiameter, !hidden);
         }
         iconMotion.observe(attentionKeys(), !hidden && (previewMode || state.screenInteractive));
-        if (hidden) return;
+        if (hideShown != hidden) { hideShown = hidden; hideChangedAt = SystemClock.elapsedRealtime(); }
+        float shown = shownProgress();
+        if (shown <= 0f) return;
+        int hideLayer = -1;
+        if (shown < 1f) {
+            hideLayer = canvas.saveLayerAlpha(0f, 0f, getWidth(), getHeight(), Math.round(255f * shown));
+            float scale = 0.72f + 0.28f * shown;
+            canvas.scale(scale, scale, cx, cy);
+        }
 
         float dotRadius = Math.min(
             dotOrbit * 0.14f,
@@ -289,12 +304,12 @@ final class PunchRingView extends View {
             // Top half (180°) rotates to the bottom half (0°) while filling out to a full sweep.
             float mouthStart = 180f + 180f * smile;
             float mouthSweep = visibleSweep + (180f - visibleSweep) * smile;
-            canvas.drawArc(batteryBounds, mouthStart, mouthSweep, false, batteryPaint);
+            drawBatteryArc(canvas, batteryBounds, mouthStart, mouthSweep);
         } else if (spinKind != 0) {
-            canvas.drawArc(batteryBounds, stateMotion.startAngle(visibleSweep, motionNow),
-                stateMotion.sweep(visibleSweep, motionNow), false, batteryPaint);
+            drawBatteryArc(canvas, batteryBounds, stateMotion.startAngle(visibleSweep, motionNow),
+                stateMotion.sweep(visibleSweep, motionNow));
         } else {
-            canvas.drawArc(batteryBounds, 180f, visibleSweep, false, batteryPaint);
+            drawBatteryArc(canvas, batteryBounds, 180f, visibleSweep);
         }
         batteryPaint.setShader(null);
 
@@ -362,6 +377,7 @@ final class PunchRingView extends View {
         }
 
         if (saveLayer >= 0) canvas.restoreToCount(saveLayer);
+        if (hideLayer >= 0) canvas.restoreToCount(hideLayer);
 
         if (state.fastCharging
                 || iconMotion.running()
@@ -398,11 +414,11 @@ final class PunchRingView extends View {
 
     private int resolveBatteryColor() {
         // Priority agreed for the UI: charging, low battery, power saver, normal.
-        if (stylePreset == 3 && !state.charging && state.batteryPercent >= 15
+        if (stylePreset == 3 && !state.charging && state.batteryPercent >= lowBatteryPercent
                 && !state.powerSave) return themed(Color.WHITE, Color.BLACK);
         if (state.fastCharging) return themed(Color.rgb(117, 226, 195), Color.rgb(0, 125, 104));
         if (state.charging) return themed(cellularBright(), cellularSaturated());
-        if (state.batteryPercent < 15) return themed(COLOR_RED, Color.rgb(210, 0, 30));
+        if (state.batteryPercent < lowBatteryPercent) return themed(COLOR_RED, Color.rgb(210, 0, 30));
         if (state.powerSave) return themed(COLOR_ORANGE, Color.rgb(230, 103, 0));
         return themed(COLOR_NORMAL, Color.BLACK);
     }
@@ -418,7 +434,7 @@ final class PunchRingView extends View {
             if ("network".equals(item) && (!state.networkConnected
                     || (state.wifiConnected && !state.networkValidated))) keys.add("network:warning");
             if ("battery".equals(item)) {
-                if (state.batteryPercent < 15) keys.add("battery:low");
+                if (state.batteryPercent < lowBatteryPercent) keys.add("battery:low");
                 else if (state.powerSave) keys.add("battery:save");
             }
             if ("event".equals(item) && state.eventKind != StatusState.EVENT_NONE
@@ -495,6 +511,33 @@ final class PunchRingView extends View {
         smileShown = smiling;
         smileChangedAt = SystemClock.elapsedRealtime();
         invalidate();
+    }
+
+    /** 1 = fully visible, 0 = fully hidden. Eased fade + shrink when smart hide toggles. */
+    private float shownProgress() {
+        long span = Math.max(1L, Math.round(280L * 100f / Math.max(10, animationSpeedPercent)));
+        float linear = hideChangedAt == 0L ? 1f
+            : Math.min(1f, (SystemClock.elapsedRealtime() - hideChangedAt) / (float) span);
+        if (!ValueAnimator.areAnimatorsEnabled()) linear = 1f;
+        float eased = linear < .5f ? 2f * linear * linear : 1f - (float) Math.pow(-2f * linear + 2f, 2) / 2f;
+        if (linear < 1f) postInvalidateOnAnimation();
+        return hideShown ? 1f - eased : eased;
+    }
+
+    /**
+     * Battery arc with a thin opposite-brightness halo underneath. The normal (near-white) arc used to
+     * vanish on light status bars, so the level was only visible while charging or in power saver.
+     */
+    private void drawBatteryArc(Canvas canvas, RectF bounds, float start, float sweep) {
+        int color = batteryPaint.getColor();
+        float width = batteryPaint.getStrokeWidth();
+        int luma = (Color.red(color) * 299 + Color.green(color) * 587 + Color.blue(color) * 114) / 1000;
+        batteryPaint.setColor(withAlpha(luma > 150 ? Color.BLACK : Color.WHITE, Math.round(Color.alpha(color) * 0.5f)));
+        batteryPaint.setStrokeWidth(width + Math.max(1.5f, width * 0.5f));
+        canvas.drawArc(bounds, start, sweep, false, batteryPaint);
+        batteryPaint.setStrokeWidth(width);
+        batteryPaint.setColor(color);
+        canvas.drawArc(bounds, start, sweep, false, batteryPaint);
     }
 
     private float smileProgress() {
