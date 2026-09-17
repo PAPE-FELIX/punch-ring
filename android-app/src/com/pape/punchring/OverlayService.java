@@ -10,6 +10,8 @@ import android.content.Intent;
 import android.content.SharedPreferences;
 import android.graphics.PixelFormat;
 import android.os.Build;
+import android.os.Handler;
+import android.os.Looper;
 import android.os.IBinder;
 import android.provider.Settings;
 import android.view.Gravity;
@@ -20,6 +22,15 @@ public final class OverlayService extends Service
         implements StatusMonitor.Listener, SharedPreferences.OnSharedPreferenceChangeListener {
     private WindowManager.LayoutParams overlayParams;
     private boolean overlayAttached;
+    private static final long UPDATE_CHECK_MS = 6L * 60L * 60L * 1000L;
+    private final Handler updateHandler = new Handler(Looper.getMainLooper());
+    private final Runnable updateCheck = new Runnable() {
+        @Override
+        public void run() {
+            UpdateChecker.check(OverlayService.this, false);
+            updateHandler.postDelayed(this, UPDATE_CHECK_MS);
+        }
+    };
     private final Runnable detachOverlay = () -> {
         if (!this.overlayAttached || this.overlayView == null || this.windowManager == null) return;
         try { this.windowManager.removeView(this.overlayView); this.overlayAttached = false; } catch (RuntimeException ignored) {}
@@ -45,6 +56,7 @@ public final class OverlayService extends Service
             stopSelf();
         }
         AppSettings.prefs(this).registerOnSharedPreferenceChangeListener(this);
+        updateHandler.post(updateCheck);
     }
 
     @Override
@@ -151,6 +163,7 @@ public final class OverlayService extends Service
     @Override
     public void onDestroy() {
         AppSettings.prefs(this).unregisterOnSharedPreferenceChangeListener(this);
+        updateHandler.removeCallbacks(updateCheck);
         RingTouchOverlayController.hide();
         if (monitor != null) {
             monitor.stop();

@@ -67,12 +67,43 @@ public final class MainActivity extends Activity {
         demoState.cellularLevel = 4;
         demoState.wifiLevel = 3;
         showSettings();
+        handleUpdateIntent(getIntent());
+    }
+
+    @Override
+    protected void onNewIntent(Intent intent) {
+        super.onNewIntent(intent);
+        setIntent(intent);
+        handleUpdateIntent(intent);
+    }
+
+    private String pendingUpdateUrl;
+
+    private void handleUpdateIntent(Intent intent) {
+        if (intent == null || !UpdateChecker.ACTION_INSTALL.equals(intent.getAction())) return;
+        String url = intent.getStringExtra(UpdateChecker.EXTRA_URL);
+        intent.setAction(null);
+        if (url == null) return;
+        if (!getPackageManager().canRequestPackageInstalls()) {
+            pendingUpdateUrl = url;
+            Toast.makeText(this, tr("이 앱의 설치 허용을 켜고 돌아오세요", "Allow installs from this app, then come back"),
+                Toast.LENGTH_LONG).show();
+            startActivity(new Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES,
+                Uri.parse("package:" + getPackageName())));
+            return;
+        }
+        UpdateChecker.install(this, url);
     }
 
     @Override
     protected void onResume() {
         super.onResume();
         refreshPermissionState();
+        if (pendingUpdateUrl != null && getPackageManager().canRequestPackageInstalls()) {
+            String url = pendingUpdateUrl;
+            pendingUpdateUrl = null;
+            UpdateChecker.install(this, url);
+        }
         if (Settings.canDrawOverlays(this)
                 && AppSettings.prefs(this).getBoolean(AppSettings.ENABLED, false)) {
             Intent intent = new Intent(this, OverlayService.class).setAction(OverlayService.ACTION_START);
@@ -492,6 +523,17 @@ public final class MainActivity extends Activity {
         backupRow.addView(restore, halfRight);
         root.addView(backupRow);
 
+        sectionTitle(root, tr("업데이트", "Updates"), medium);
+        Button update = actionButton(tr("업데이트 확인 · 현재 ", "Check for updates · v") + versionName(),
+            Color.rgb(53, 59, 70));
+        update.setTextColor(Color.WHITE);
+        update.setOnClickListener(view -> UpdateChecker.check(this, true));
+        root.addView(update, matchButtonParams(small));
+        root.addView(label(tr(
+            "6시간마다 GitHub 릴리스를 확인해 새 버전이 있으면 알림을 띄워요. 알림을 누르면 받아서 설치 창을 엽니다.",
+            "Checks GitHub releases every 6 hours and notifies you. Tap the notification to download and install."),
+            13, Color.rgb(145, 151, 161)));
+
         TextView note = label(tr(
             "표시 우선순위  고속충전 → 충전 → 배터리 부족(설정값 미만) → 절전 → 일반\n" +
                 "네트워크 점은 같은 네 좌표에 셀룰러를 먼저 그리고 Wi-Fi를 위에 겹칩니다.",
@@ -811,6 +853,14 @@ public final class MainActivity extends Activity {
         view.setTypeface(android.graphics.Typeface.DEFAULT_BOLD);
         view.setPadding(0, topPadding, 0, dp(10));
         root.addView(view);
+    }
+
+    private String versionName() {
+        try {
+            return getPackageManager().getPackageInfo(getPackageName(), 0).versionName;
+        } catch (PackageManager.NameNotFoundException e) {
+            return "?";
+        }
     }
 
     private Button actionButton(String text, int tint) {
