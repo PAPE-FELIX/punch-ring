@@ -65,6 +65,7 @@ final class PunchRingView extends View {
     private int lowBatteryPercent = AppSettings.DEFAULT_LOW_BATTERY_PERCENT;
     // Smart-hide fade: fullscreen/camera hide and show ease in and out instead of popping.
     private boolean hideShown = false;
+    private boolean forceHidden = false;   // set by OverlayService while a permission/installer screen is in front
     private long hideChangedAt = 0L;
     private int animationSpeedPercent = AppSettings.DEFAULT_ANIMATION_SPEED_PERCENT;
     private int thermalThresholdC = AppSettings.DEFAULT_THERMAL_THRESHOLD_C;
@@ -224,7 +225,7 @@ final class PunchRingView extends View {
         }
         float smile = smileProgress();
         // In smile mode the ring stays on top of the camera instead of hiding.
-        boolean hidden = !previewMode && smartHide && shouldHideForContext() && smile <= 0f;
+        boolean hidden = !previewMode && (forceHidden || (smartHide && shouldHideForContext() && smile <= 0f));
         if (!previewMode) {
             float visualDiameter = Math.max(batteryDiameterDp, dotDiameterDp) * density;
             // The physical camera hole has no touch sensor. Keep the artwork unchanged,
@@ -416,7 +417,8 @@ final class PunchRingView extends View {
         // Priority agreed for the UI: charging, low battery, power saver, normal.
         if (stylePreset == 3 && !state.charging && state.batteryPercent >= lowBatteryPercent
                 && !state.powerSave) return themed(Color.WHITE, Color.BLACK);
-        if (state.fastCharging) return themed(Color.rgb(117, 226, 195), Color.rgb(0, 125, 104));
+        // Fast charging: vivid Apple-battery green (system green on dark, deeper green on light backgrounds)
+        if (state.fastCharging) return themed(Color.rgb(48, 209, 88), Color.rgb(36, 168, 70));
         if (state.charging) return themed(cellularBright(), cellularSaturated());
         if (state.batteryPercent < lowBatteryPercent) return themed(COLOR_RED, Color.rgb(210, 0, 30));
         if (state.powerSave) return themed(COLOR_ORANGE, Color.rgb(230, 103, 0));
@@ -510,6 +512,13 @@ final class PunchRingView extends View {
         previewSmile = smiling;
         smileShown = smiling;
         smileChangedAt = SystemClock.elapsedRealtime();
+        invalidate();
+    }
+
+    /** Fade the ring out/in (same easing as smart hide) before the service detaches or after it re-attaches the window. */
+    void setForceHidden(boolean hide) {
+        if (forceHidden == hide) return;
+        forceHidden = hide;
         invalidate();
     }
 

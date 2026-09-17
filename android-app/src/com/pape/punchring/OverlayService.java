@@ -18,6 +18,12 @@ import android.view.WindowManager;
 
 public final class OverlayService extends Service
         implements StatusMonitor.Listener, SharedPreferences.OnSharedPreferenceChangeListener {
+    private WindowManager.LayoutParams overlayParams;
+    private boolean overlayAttached;
+    private final Runnable detachOverlay = () -> {
+        if (!this.overlayAttached || this.overlayView == null || this.windowManager == null) return;
+        try { this.windowManager.removeView(this.overlayView); this.overlayAttached = false; } catch (RuntimeException ignored) {}
+    };
     static final String ACTION_START = "com.pape.punchring.START";
     static final String ACTION_STOP = "com.pape.punchring.STOP";
     private static final int NOTIFICATION_ID = 8108;
@@ -94,7 +100,9 @@ public final class OverlayService extends Service
             params.layoutInDisplayCutoutMode =
                 WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_ALWAYS;
         }
+        overlayParams = params;
         windowManager.addView(overlayView, params);
+        overlayAttached = true;
 
         monitor = new StatusMonitor(this, this);
         monitor.start();
@@ -109,6 +117,35 @@ public final class OverlayService extends Service
     @Override
     public void onSharedPreferenceChanged(SharedPreferences prefs, String key) {
         if (overlayView != null) overlayView.reloadSettings();
+        if (AppSettings.FOREGROUND_PACKAGE.equals(key)) syncOverlayForSensitiveScreens(prefs.getString(key, ""));
+    }
+
+    /**
+     * Android blocks taps on permission/install dialogs while another app's window covers the screen
+     * (tapjacking protection). The overlay is a full-screen window, so merely drawing nothing is not
+     * enough — detach the window while such a dialog is in front and re-attach afterwards.
+     */
+    private void syncOverlayForSensitiveScreens(String foreground) {
+        if (overlayView == null || windowManager == null || overlayParams == null) return;
+        boolean sensitive = isSensitivePackage(foreground);
+        overlayView.setForceHidden(sensitive);
+        overlayView.removeCallbacks(detachOverlay);
+        if (sensitive && overlayAttached) {
+            // let the fade-out play, then take the window away so the dialog accepts taps
+            overlayView.postDelayed(detachOverlay, 320L);
+        } else if (!sensitive && !overlayAttached) {
+            try {
+                windowManager.addView(overlayView, overlayParams);   // view is still fading from hidden → eases back in
+                overlayAttached = true;
+            } catch (RuntimeException ignored) {}
+        }
+    }
+
+    static boolean isSensitivePackage(String pkg) {
+        if (pkg == null || pkg.isEmpty()) return false;
+        return pkg.contains("permissioncontroller") || pkg.contains("packageinstaller")
+            || pkg.equals("com.android.settings") || pkg.equals("com.samsung.android.settings")
+            || pkg.contains("com.google.android.gms") && pkg.contains("auth");
     }
 
     @Override
@@ -121,7 +158,8 @@ public final class OverlayService extends Service
         }
         if (overlayView != null && windowManager != null) {
             RingTouchOverlayController.detachRing(overlayView);
-            try { windowManager.removeView(overlayView); } catch (RuntimeException ignored) {}
+            if (overlayAttached) { try { windowManager.removeView(overlayView); } catch (RuntimeException ignored) {} }
+            overlayAttached = false;
             overlayView = null;
         }
         super.onDestroy();
