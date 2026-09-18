@@ -27,7 +27,8 @@ import java.net.URL;
 final class UpdateChecker {
     static final String ACTION_INSTALL = "com.pape.punchring.INSTALL_UPDATE";
     static final String EXTRA_URL = "apk_url";
-    private static final String API = "https://api.github.com/repos/PAPE-FELIX/punch-ring/releases/latest";
+    /** 공개판은 GitHub 릴리스, 사내판은 인사이드 서버를 본다 (사내판은 이 상수만 바꾼다). */
+    static final String SOURCE = "https://api.github.com/repos/PAPE-FELIX/punch-ring/releases/latest";
     private static final String CHANNEL = "punch_ring_updates";
     private static final String LAST_CHECK = "update_last_check";
     private static final long INTERVAL_MS = 6L * 60L * 60L * 1000L;
@@ -42,11 +43,11 @@ final class UpdateChecker {
         AppSettings.prefs(app).edit().putLong(LAST_CHECK, now).apply();
         new Thread(() -> {
             try {
-                JSONObject release = new JSONObject(get(API));
-                String latest = release.optString("tag_name", "").replaceFirst("^v", "");
-                String url = null;
+                JSONObject release = new JSONObject(get(SOURCE));
+                String latest = release.optString("tag_name", release.optString("version", "")).replaceFirst("^v", "");
+                String url = release.optString("url", null);   // 사내 배포 manifest: {"version":"0.17.1","url":"…apk"}
                 JSONArray assets = release.optJSONArray("assets");
-                for (int i = 0; assets != null && i < assets.length(); i++) {
+                for (int i = 0; url == null && assets != null && i < assets.length(); i++) {
                     JSONObject a = assets.getJSONObject(i);
                     if (a.optString("name").endsWith(".apk")) { url = a.optString("browser_download_url"); break; }
                 }

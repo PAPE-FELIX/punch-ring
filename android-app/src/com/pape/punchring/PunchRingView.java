@@ -275,15 +275,16 @@ final class PunchRingView extends View {
         batteryPaint.setShader(null);
         int brightTrack = Color.argb(stylePreset == 2 ? 34 : 62, 245, 247, 250);
         int darkTrack = Color.argb(82, 0, 0, 0);
-        batteryPaint.setColor(blend(brightTrack, darkTrack, lightThemeProgress));
+        int trackColor = blend(brightTrack, darkTrack, lightThemeProgress);
+        batteryPaint.setColor(trackColor);
         // 웃는 얼굴이어도 호는 제자리 — 원래 링 테두리 위에서 180도만 돈다 (형 지시 2026-09-16)
         RectF batteryBounds = new RectF(
             cx - batteryRadius, cy - batteryRadius,
             cx + batteryRadius, cy + batteryRadius);
         if (smile < 1f) {
-            batteryPaint.setAlpha(Math.round(255f * (1f - smile)));
+            // 링 배경(트랙)은 원래 반투명(알파 34~82)이다. 예전엔 setAlpha(255) 로 덮어써서 불투명한 흰 링이 됐다 (형 신고 2026-09-18).
+            batteryPaint.setAlpha(Math.round(Color.alpha(trackColor) * (1f - smile)));
             canvas.drawArc(batteryBounds, 180f, 180f, false, batteryPaint);
-            batteryPaint.setAlpha(255);
         }
 
         float targetSweep = 180f * Math.max(0, Math.min(100, state.batteryPercent)) / 100f;
