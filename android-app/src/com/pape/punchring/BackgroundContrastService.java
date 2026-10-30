@@ -260,7 +260,7 @@ public final class BackgroundContrastService extends AccessibilityService {
 
             int width = hardware.getWidth();
             int height = hardware.getHeight();
-            int centerX = width > 2000 ? Math.round(width * 0.7606f) : width / 2;
+            int centerX = Math.round(width * CutoutGeometry.centerXFraction(this));
             int halfSpan = Math.max(90, Math.round(width * 0.13f));
             int left = Math.max(0, centerX - halfSpan);
             int right = Math.min(width, centerX + halfSpan);

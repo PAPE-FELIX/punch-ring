@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Punch Ring</string>
+    <string name="accessibility_service_label">Punch Ring Auto-Kontrast und Ring-Touch</string>
+    <string name="contrast_service_description">Tippe auf den Ring ums Kameraloch, um die Selfie-Kamera zu öffnen, oder drücke lange für das Gerätestatus-Panel. Die Farben von Punch Ring passen sich der Helligkeit oben am Bildschirm an. Bildschirminhalte werden nie gespeichert oder gesendet.</string>
+</resources>
